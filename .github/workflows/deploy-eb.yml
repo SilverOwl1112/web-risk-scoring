@@ -1,0 +1,71 @@
+name: CI - Build & Deploy to Elastic Beanstalk
+
+on:
+  push:
+    branches: [ main ]
+
+jobs:
+  build-and-deploy:
+    runs-on: ubuntu-latest
+    env:
+      IMAGE_NAME: web-risk-backend
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v2
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ secrets.AWS_REGION }}
+
+      - name: Login to Amazon ECR
+        id: ecr-login
+        uses: aws-actions/amazon-ecr-login@v1
+
+      - name: Build Docker image
+        run: |
+          REPO=${{ secrets.ECR_REPOSITORY }}
+          TAG=${{ github.sha }}
+          docker build -t $REPO:$TAG backend
+          docker tag $REPO:$TAG ${{ env.AWS_ACCOUNT_ID }}.dkr.ecr.${{ secrets.AWS_REGION }}.amazonaws.com/$REPO:$TAG
+
+      - name: Push to ECR
+        run: |
+          REPO=${{ secrets.ECR_REPOSITORY }}
+          TAG=${{ github.sha }}
+          aws ecr describe-repositories --repository-names "$REPO" || aws ecr create-repository --repository-name "$REPO"
+          docker push ${{ env.AWS_ACCOUNT_ID }}.dkr.ecr.${{ secrets.AWS_REGION }}.amazonaws.com/$REPO:$TAG
+
+      - name: Create Dockerrun file for EB
+        run: |
+          REPO=${{ secrets.ECR_REPOSITORY }}
+          TAG=${{ github.sha }}
+          ECR_URI=${{ env.AWS_ACCOUNT_ID }}.dkr.ecr.${{ secrets.AWS_REGION }}.amazonaws.com/$REPO:$TAG
+          cat > Dockerrun.aws.json <<EOF
+          {
+            "AWSEBDockerrunVersion": 1,
+            "Image": {
+              "Name": "${ECR_URI}",
+              "Update": "true"
+            },
+            "Ports": [
+              { "ContainerPort": "8000" }
+            ]
+          }
+          EOF
+          zip -r app.zip Dockerrun.aws.json
+
+      - name: Upload application version to S3
+        run: |
+          aws s3 mb s3://${{ secrets.EB_S3_BUCKET }} || true
+          aws s3 cp app.zip s3://${{ secrets.EB_S3_BUCKET }}/app_${{ github.sha }}.zip
+
+      - name: Create EB application version
+        run: |
+          aws elasticbeanstalk create-application-version --application-name ${{ secrets.EB_APPLICATION }} --version-label v-${{ github.sha }} --source-bundle S3Bucket=${{ secrets.EB_S3_BUCKET }},S3Key=app_${{ github.sha }}.zip
+
+      - name: Update EB environment
+        run: |
+          aws elasticbeanstalk update-environment --application-name ${{ secrets.EB_APPLICATION }} --environment-name ${{ secrets.EB_ENVIRONMENT }} --version-label v-${{ github.sha }}
