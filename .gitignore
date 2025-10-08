@@ -1,2 +1,29 @@
-backend/.venv/
+# Python
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+*.env
+.venv/
+env/
+ENV/
+*.swp
+
+# ML models
 ml/models/*.joblib
+
+# OS / IDE
+.DS_Store
+*.iml
+*.log
+.idea/
+.vscode/
+
+# Mobile / Flutter
+build/
+ios/Flutter/ephemeral/
+android/app/build/
+*.apk
+*.aab
+
+backend/.venv
