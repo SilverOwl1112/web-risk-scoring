@@ -1,3 +1,23 @@
+# Python virtual environment
+backend/.venv/
+*.pyc
+__pycache__/
+
+# OS / IDE files
+.DS_Store
+*.swp
+.idea/
+*.iml
+.vscode/
+
+# Build / cache files
+build/
+dist/
+*.egg-info/
+
+# Large ML binaries (optional)
+ml/models/*.joblib
+
 # Python
 __pycache__/
 *.pyc
@@ -11,6 +31,7 @@ env/
 # Backend
 backend/app/__pycache__/
 backend/app/connectors/__pycache__/
+backend/.venv/
 
 # ML artifacts (only ignore huge temporary stuff, keep models & dataset)
 ml/__pycache__/
@@ -73,3 +94,23 @@ build/
 
 # Logs
 *.log
+
+# Python virtual environment
+backend/.venv/
+*.pyc
+__pycache__/
+
+# OS / IDE files
+.DS_Store
+*.swp
+.idea/
+*.iml
+.vscode/
+
+# Build / cache files
+build/
+dist/
+*.egg-info/
+
+# Large ML binaries (optional)
+ml/models/*.joblib
