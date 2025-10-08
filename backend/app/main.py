@@ -1,52 +1,64 @@
 # backend/app/main.py
 from fastapi import FastAPI, HTTPException
 from pydantic import BaseModel
-from app.features import extract_features_from_enrichment
-from app.scoring import compute_risk_score
-from app.report import generate_pdf_report
-from app.models import init_db, SessionLocal, ScanResult
+from typing import Dict
+import traceback
 
-app = FastAPI(title="Web Risk Scoring API")
+from .connectors import (
+    shodan_connector,
+    vt_connector,
+    hibp_connector,
+    abuseipdb_connector,
+    ssl_connector
+)
+from .features import extract_features_from_osint
+from .scoring import predict_score
 
-# initialize DB
-init_db()
+app = FastAPI(title="Cyber Risk Scoring API")
 
 class ScanRequest(BaseModel):
-    target: str   # domain or IP
-    mode: str = "passive"  # 'passive' or 'full' (full disabled unless permitted)
-    meta: dict = {}
+    target: str  # domain or IP
 
 @app.post("/api/scan")
-def start_scan(payload: ScanRequest):
-    target = payload.target
-    # 1) Call connectors to enrich data (placeholders - safe read-only)
-    # Note: implement connectors in app/connectors/*.py and use API keys set via env
-    from app.connectors import shodan_connector, vt_connector, hibp_connector
-    enrichment = {}
-    # Do safe, read-only enrichments (no active exploits)
+async def scan_endpoint(req: ScanRequest):
+    target = req.target.strip()
+    osint = {}
     try:
-        enrichment['shodan'] = shodan_connector.query_host(target)    # returns dict or None
-        enrichment['vt'] = vt_connector.query_domain(target)
-        enrichment['hibp'] = hibp_connector.check_domain(target)
+        # === 1. Shodan Scan ===
+        try:
+            osint.update(shodan_connector.scan_host(target))
+        except Exception as e:
+            osint.update({"shodan_open_ports": 0, "shodan_vuln_services": 0})
+
+        # === 2. VirusTotal ===
+        try:
+            osint.update(vt_connector.vt_domain_report(target))
+        except Exception as e:
+            osint.update({"vt_malicious_score": 0})
+
+        # === 3. Have I Been Pwned ===
+        try:
+            osint.update(hibp_connector.check_pwned(target))
+        except Exception as e:
+            osint.update({"pwned_count": 0})
+
+        # === 4. AbuseIPDB ===
+        try:
+            osint.update(abuseipdb_connector.check_ip_reputation(target))
+        except Exception as e:
+            osint.update({"abuse_confidence_score": 0})
+
+        # === 5. SSL Labs ===
+        try:
+            osint.update(ssl_connector.check_ssl_grade(target))
+        except Exception as e:
+            osint.update({"ssl_grade": "N/A", "ssl_issues": 0})
+
+        # === 6. Feature Extraction + Scoring ===
+        features = extract_features_from_osint(osint)
+        result = predict_score(features)
+
+        return {"target": target, "osint": osint, "features": features, "result": result}
     except Exception as e:
-        # log and continue
-        enrichment['error'] = str(e)
-
-    # 2) Extract features
-    features = extract_features_from_enrichment(enrichment)
-
-    # 3) Compute score
-    score, details = compute_risk_score(features)
-
-    # 4) Persist result
-    db = SessionLocal()
-    record = ScanResult(target=target, score=score, details=details)
-    db.add(record)
-    db.commit()
-    db.refresh(record)
-
-    # 5) generate report (pdf) and return URL placeholder
-    pdf_path = generate_pdf_report(record.id, target, score, details)
-    # Upload pdf_path to S3 in production; here we return local path
-    return {"scan_id": record.id, "score": score, "details": details, "report": pdf_path}
-
+        traceback.print_exc()
+        raise HTTPException(status_code=500, detail=str(e))

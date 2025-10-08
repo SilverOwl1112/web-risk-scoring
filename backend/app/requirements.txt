@@ -1,0 +1,29 @@
+# Core API
+fastapi
+uvicorn[standard]
+pydantic
+python-dotenv
+
+# HTTP & APIs
+requests
+httpx
+
+# Data processing & ML
+pandas
+numpy
+scikit-learn
+xgboost
+joblib
+
+# Security & Connectors
+shodan
+certifi
+
+# Optional (only include if you actually use these)
+# for generating PDFs in report.py
+fpdf2
+# or reportlab
+
+# for parsing web pages (if needed in OSINT scraping)
+beautifulsoup4
+lxml

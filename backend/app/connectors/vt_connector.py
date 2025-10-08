@@ -1,13 +1,21 @@
-# backend/app/connectors/vt_connector.py
+# connectors/vt_connector.py
 import os, requests
-VT_API = os.getenv("VT_API_KEY", "")
 
-def query_domain(domain):
-    if not VT_API:
-        return {"note": "VT key not set"}
-    url = f"https://www.virustotal.com/api/v3/domains/{domain}"
-    headers = {"x-apikey": VT_API}
-    r = requests.get(url, headers=headers, timeout=15)
-    if r.status_code == 200:
-        return r.json()
-    return {"error": f"status_code_{r.status_code}"}
+VT_API_KEY = os.getenv("VT_API_KEY", "")
+VT_URL = "https://www.virustotal.com/api/v3/domains/"
+
+def vt_domain_report(domain):
+    data = {"vt_malicious_score": 0}
+    if not VT_API_KEY:
+        return data
+    try:
+        r = requests.get(f"{VT_URL}{domain}", headers={"x-apikey": VT_API_KEY})
+        if r.status_code == 200:
+            j = r.json()
+            malicious = j["data"]["attributes"]["last_analysis_stats"]["malicious"]
+            suspicious = j["data"]["attributes"]["last_analysis_stats"]["suspicious"]
+            total = malicious + suspicious
+            data["vt_malicious_score"] = total
+    except Exception:
+        pass
+    return data
