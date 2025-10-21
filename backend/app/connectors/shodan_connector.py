@@ -1,6 +1,7 @@
 # connectors/shodan_connector.py
 import os
 from shodan import Shodan
+import socket
 
 SHODAN_KEY = os.getenv("SHODAN_API_KEY", "")
 shodan_client = Shodan(SHODAN_KEY) if SHODAN_KEY else None
@@ -10,7 +11,9 @@ def scan_host(target):
     if not shodan_client:
         return data
     try:
-        host = shodan_client.host(target)
+        # resolve domain → IP
+        ip = socket.gethostbyname(target)
+        host = shodan_client.host(ip)
         ports = host.get("ports", [])
         data["shodan_open_ports"] = len(ports)
 

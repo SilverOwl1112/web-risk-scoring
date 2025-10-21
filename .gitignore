@@ -27,3 +27,8 @@ android/app/build/
 *.aab
 
 backend/.venv
+
+# Elastic Beanstalk Files
+.elasticbeanstalk/*
+!.elasticbeanstalk/*.cfg.yml
+!.elasticbeanstalk/*.global.yml

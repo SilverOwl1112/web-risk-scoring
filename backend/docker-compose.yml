@@ -1,9 +1,15 @@
 version: '3.8'
+
 services:
   web:
-    build: .
+    build:
+      context: .
+      dockerfile: Dockerfile
     ports:
       - "8000:8000"
     volumes:
-      - ./app:/app/app
-      - ./reports:/app/reports
+      - ./app:/app/app       # Maps local app folder to container
+      - ./ml:/app/ml         # Maps local ML models/datasets
+      - ./reports:/app/reports # For generated PDF reports
+    env_file:
+      - ./backend/.env       # Load all environment variables from .env
