@@ -1,0 +1,20 @@
+# Ignore virtual envs
+.venv/
+venv/
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+
+# Ignore git & local configs
+.git/
+.gitignore
+.env
+
+# Ignore reports and caches
+reports/
+*.log
+
+# Ignore local Docker caches
+**/Dockerfile
+**/docker-compose.yml
