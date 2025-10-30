@@ -1,34 +1,137 @@
-# Python
+# ------------------------------
+# Python / FastAPI backend
+# ------------------------------
 __pycache__/
 *.pyc
 *.pyo
 *.pyd
 *.env
+.env
 .venv/
 env/
 ENV/
-*.swp
+venv/
+backend/.venv/
+backend/env/
+backend/ENV/
 
-# ML models
-ml/models/*.joblib
-
-# OS / IDE
-.DS_Store
-*.iml
+# Bytecode & cache
 *.log
+*.tmp
+*.pid
+*.bak
+*.swp
+*.swo
+*.sqlite3
+*.db
+
+# Compiled / generated files
+*.egg-info/
+dist/
+build/
+*.spec
+
+# ------------------------------
+# Machine Learning Artifacts
+# ------------------------------
+ml/models/
+ml/checkpoints/
+ml/__pycache__/
+*.joblib
+*.pkl
+*.sav
+*.h5
+*.onnx
+*.bin
+*.npy
+*.npz
+
+# ------------------------------
+# Reports / Temp Outputs
+# ------------------------------
+reports/
+*.pdf
+*.csv
+*.xlsx
+*.xls
+*.html
+
+# ------------------------------
+# IDE & OS Specific
+# ------------------------------
+.DS_Store
+Thumbs.db
 .idea/
 .vscode/
+*.iml
 
-# Mobile / Flutter
-build/
-ios/Flutter/ephemeral/
-android/app/build/
+# ------------------------------
+# Node / Mobile (Flutter)
+# ------------------------------
+mobile/build/
+mobile/ios/Flutter/ephemeral/
+mobile/ios/Pods/
+mobile/android/.gradle/
+mobile/android/app/build/
+mobile/node_modules/
 *.apk
 *.aab
 
-backend/.venv
-
-# Elastic Beanstalk Files
+# ------------------------------
+# AWS Elastic Beanstalk / Cloud Deploy
+# ------------------------------
 .elasticbeanstalk/*
 !.elasticbeanstalk/*.cfg.yml
 !.elasticbeanstalk/*.global.yml
+
+# ------------------------------
+# Logs / Cache / Pip / Tools
+# ------------------------------
+*.log
+pip-log.txt
+pip-delete-this-directory.txt
+__pycache__/
+.pytest_cache/
+.coverage
+coverage.xml
+htmlcov/
+.cache/
+mypy_cache/
+pytestdebug.log
+
+# ------------------------------
+# System and virtual files
+# ------------------------------
+*.lock
+*.tar
+*.zip
+*.gz
+*.tgz
+
+# ------------------------------
+# Jupyter / Misc Dev
+# ------------------------------
+.ipynb_checkpoints/
+*.ipynb
+notebooks/.ipynb_checkpoints/
+
+# ------------------------------
+# Temporary local data
+# ------------------------------
+data/
+tmp/
+temp/
+uploads/
+downloads/
+
+# ------------------------------
+# Secrets / Keys
+# ------------------------------
+*.pem
+*.key
+*.crt
+*.csr
+*.p12
+*.keystore
+secrets.json
+config.json

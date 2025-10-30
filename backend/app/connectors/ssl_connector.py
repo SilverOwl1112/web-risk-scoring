@@ -1,19 +1,27 @@
 # connectors/ssl_connector.py
-import requests, time
+import asyncio
+from httpx import AsyncClient, Timeout
+from ssllabs import Ssllabs
 
-SSL_LABS_API = "https://api.ssllabs.com/api/v3/analyze"
-
-def check_ssl_grade(domain):
+async def check_ssl_grade_async(domain: str) -> dict:
+    """
+    Async SSL Labs analysis with safe fallback.
+    Returns: {"ssl_grade": "A"|"B"|...|"N/A", "ssl_issues": 0|1}
+    """
     data = {"ssl_grade": "N/A", "ssl_issues": 0}
     try:
-        params = {"host": domain, "publish": "off", "startNew": "on", "all": "done"}
-        r = requests.get(SSL_LABS_API, params=params)
-        j = r.json()
-        if "endpoints" in j and len(j["endpoints"]) > 0:
-            grade = j["endpoints"][0].get("grade", "N/A")
-            data["ssl_grade"] = grade
-            if grade not in ["A", "A+", "B"]:
-                data["ssl_issues"] = 1
-    except Exception:
-        pass
+        timeout = Timeout(30.0, read=60.0)
+        async with AsyncClient(timeout=timeout) as client:
+            ssllabs = Ssllabs(client)
+            analysis = await ssllabs.analyze(host=domain)
+            endpoints = getattr(analysis, "endpoints", None)
+            if endpoints and len(endpoints) > 0:
+                endpoint = endpoints[0]
+                grade = getattr(endpoint, "grade", None)
+                if grade:
+                    data["ssl_grade"] = grade
+                    if grade not in ("A", "A+", "B"):
+                        data["ssl_issues"] = 1
+    except Exception as e:
+        print(f"[ssl_connector] error: {e}")
     return data

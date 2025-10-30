@@ -20,26 +20,41 @@ def social_presence_to_num(s):
 
 def extract_features_from_osint(osint):
     """
-    osint: dict returned by connectors; keys expected:
-      email_breached, email_breach_count, phone_breached,
-      ip_abuse_score, ip_abuse_reports,
-      shodan_open_ports, shodan_vuln_services,
-      nvd_vuln_count,
-      ssl_grade, ssl_expired, social_presence, business_verified
-    Returns a dict with feature names matching training CSV.
+    osint: dict possibly nested by connector name.
+    Example:
+      {
+        "virustotal": {...},
+        "abuseipdb": {...},
+        "ssl": {...},
+        ...
+      }
+    We flatten all nested dicts into one before extracting features.
     """
-    features = {}
-    features["email_breached"] = int(osint.get("email_breached", 0))
-    features["email_breach_count"] = int(osint.get("email_breach_count", 0))
-    features["phone_breached"] = int(osint.get("phone_breached", 0))
-    features["ip_abuse_score"] = int(osint.get("ip_abuse_score", 0))
-    features["ip_abuse_reports"] = int(osint.get("ip_abuse_reports", 0))
-    features["shodan_open_ports"] = int(osint.get("shodan_open_ports", 0))
-    features["shodan_vuln_services"] = int(osint.get("shodan_vuln_services", 0))
-    features["nvd_vuln_count"] = int(osint.get("nvd_vuln_count", 0))
-    features["ssl_grade_num"] = ssl_grade_to_num(osint.get("ssl_grade"))
-    features["ssl_expired"] = int(osint.get("ssl_expired", 0))
-    features["social_presence_num"] = social_presence_to_num(osint.get("social_presence"))
-    features["business_verified"] = int(osint.get("business_verified", 0))
-    return features
+    # Flatten any nested dicts
+    flat = {}
+    for key, val in osint.items():
+        if isinstance(val, dict):
+            flat.update(val)
+        else:
+            flat[key] = val
 
+    features = {}
+    features["email_breached"] = int(flat.get("email_breached", 0))
+    features["email_breach_count"] = int(flat.get("email_breach_count", 0))
+    features["phone_breached"] = int(flat.get("phone_breached", 0))
+    features["ip_abuse_score"] = int(flat.get("ip_abuse_score", 0))
+    features["ip_abuse_reports"] = int(flat.get("ip_abuse_reports", 0))
+    features["shodan_open_ports"] = int(flat.get("shodan_open_ports", 0))
+    features["shodan_vuln_services"] = int(flat.get("shodan_vuln_services", 0))
+    features["nvd_vuln_count"] = int(flat.get("nvd_vuln_count", 0))
+    features["ssl_grade_num"] = ssl_grade_to_num(flat.get("ssl_grade"))
+    features["ssl_expired"] = int(flat.get("ssl_expired", 0))
+    features["social_presence_num"] = social_presence_to_num(flat.get("social_presence"))
+    features["business_verified"] = int(flat.get("business_verified", 0))
+
+    # ✅ Include VirusTotal signals explicitly
+    features["vt_malicious_score"] = int(flat.get("vt_malicious_score", 0))
+    features["vt_suspicious_score"] = int(flat.get("vt_suspicious_score", 0))
+    features["vt_total_signals"] = int(flat.get("vt_total_signals", 0))
+
+    return features

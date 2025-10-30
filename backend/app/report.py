@@ -1,6 +1,8 @@
-# backend/app/report.py
 from fpdf import FPDF
-import datetime, os, json, boto3
+import datetime
+import os
+import json
+import boto3
 from dotenv import load_dotenv
 
 load_dotenv()  # Load environment variables from .env if present
