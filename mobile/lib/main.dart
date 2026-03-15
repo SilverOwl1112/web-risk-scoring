@@ -6,6 +6,7 @@ import 'dart:convert';
 import 'dart:io';
 import 'package:http/http.dart' as http;
 import 'package:path_provider/path_provider.dart'; // ✅ required for saving the file
+import 'package:fl_chart/fl_chart.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -21,7 +22,17 @@ class MyApp extends StatelessWidget {
     return MaterialApp(
       title: 'Cyber Risk Scanner',
       theme: ThemeData(
-        primarySwatch: Colors.indigo,
+        brightness: Brightness.dark,
+        scaffoldBackgroundColor: const Color(0xFF0F172A), // deep SOC background
+        primaryColor: Colors.cyanAccent,
+        cardColor: const Color(0xFF1E293B),
+        appBarTheme: const AppBarTheme(
+          backgroundColor: Color(0xFF020617),
+          elevation: 0,
+        ),
+        textTheme: const TextTheme(
+          bodyMedium: TextStyle(color: Colors.white),
+        ),
       ),
       home: const ScanPage(),
     );
@@ -81,10 +92,42 @@ class _ScanPageState extends State<ScanPage> {
     }
   }
 
+  Map<String,int> countVulns() {
+
+    List vulns = result?['web_scan']?['vulnerabilities'] ?? [];
+
+    int low = 0;
+    int medium = 0;
+    int high = 0;
+    int critical = 0;
+
+    for (var v in vulns) {
+
+      String sev = (v['severity'] ?? '').toString().toUpperCase();
+
+      if (sev == "LOW") low++;
+      if (sev == "MEDIUM") medium++;
+      if (sev == "HIGH") high++;
+      if (sev == "CRITICAL") critical++;
+    }
+
+    return {
+      "low": low,
+      "medium": medium,
+      "high": high,
+      "critical": critical
+    };
+  }
+
   @override
   Widget build(BuildContext ctx) {
     return Scaffold(
-      appBar: AppBar(title: const Text("Cyber Risk Scanner")),
+      appBar: AppBar(
+        title: const Text(
+          "Cyber Risk SOC Dashboard",
+          style: TextStyle(letterSpacing: 1.2),
+        ),
+      ),
       body: Padding(
         padding: const EdgeInsets.all(16),
         child: Column(
@@ -105,6 +148,9 @@ class _ScanPageState extends State<ScanPage> {
                 child: const Text("Start Scan"),
               ),
             ),
+            
+            const SizedBox(height: 12),
+            scanningIndicator(loading),
             const SizedBox(height: 16),
             if (loading) const CircularProgressIndicator(),
             if (error != null) ...[
@@ -128,6 +174,32 @@ class _ScanPageState extends State<ScanPage> {
                           const SizedBox(height: 8),
                           Text("Score: ${result!['result']?['score'] ?? 'N/A'}"),
                           Text("Category: ${result!['result']?['category'] ?? 'N/A'}"),
+                          const SizedBox(height: 16),
+
+                          // SOC DASHBOARD VISUALS
+                          
+                          securityStatusBanner(
+                            result!['result']?['score'] ?? 0
+                          ),
+
+                          const SizedBox(height: 12),
+
+                          attackSurfaceGauge(
+                            (result!['attack_surface']?['attack_surface_score'] ?? 0).toDouble()
+                          ),
+
+                          const SizedBox(height: 12),
+
+                          
+
+                          const SizedBox(height: 12),
+                          threatHeatmap(countVulns()),
+                          const SizedBox(height: 12),
+
+                          riskTimeline([
+                            (result!['result']?['score'] ?? 0).toDouble()
+                          ]),
+
                           const SizedBox(height: 8),
                           const Text("Features:",
                               style: TextStyle(fontWeight: FontWeight.bold)),
@@ -154,4 +226,182 @@ class _ScanPageState extends State<ScanPage> {
       ),
     );
   }
+}
+// ===============================
+// SOC DASHBOARD WIDGETS
+// ===============================
+
+// Attack Surface Gauge
+Widget attackSurfaceGauge(double score) {
+  return Card(
+    child: Padding(
+      padding: const EdgeInsets.all(12),
+      child: Column(
+        children: [
+          const Text("Attack Surface Score",
+              style: TextStyle(fontWeight: FontWeight.bold)),
+          const SizedBox(height: 10),
+          SizedBox(
+            height: 180,
+            child: PieChart(
+              PieChartData(
+                startDegreeOffset: 180,
+                centerSpaceRadius: 60,
+                sectionsSpace: 0,
+                sections: [
+                  PieChartSectionData(
+                    value: score,
+                    color: Colors.red,
+                    showTitle: false,
+                    radius: 40,
+                  ),
+                  PieChartSectionData(
+                    value: 100 - score,
+                    color: Colors.grey.shade300,
+                    showTitle: false,
+                    radius: 40,
+                  ),
+                ],
+              ),
+            ),
+          ),
+          Text("Score: ${score.toInt()}",
+              style: const TextStyle(fontSize: 18))
+        ],
+      ),
+    ),
+  );
+}
+
+// Threat Heatmap
+Widget threatHeatmap(Map counts) {
+  return Card(
+    child: Padding(
+      padding: const EdgeInsets.all(12),
+      child: Column(
+        children: [
+          const Text("Threat Distribution",
+              style: TextStyle(fontWeight: FontWeight.bold)),
+          const SizedBox(height: 10),
+          SizedBox(
+            height: 200,
+            child: BarChart(
+              BarChartData(
+                barGroups: [
+                  BarChartGroupData(x: 0, barRods: [
+                    BarChartRodData(toY: (counts["low"] ?? 0).toDouble())
+                  ]),
+                  BarChartGroupData(x: 1, barRods: [
+                    BarChartRodData(toY: (counts["medium"] ?? 0).toDouble())
+                  ]),
+                  BarChartGroupData(x: 2, barRods: [
+                    BarChartRodData(toY: (counts["high"] ?? 0).toDouble())
+                  ]),
+                  BarChartGroupData(x: 3, barRods: [
+                    BarChartRodData(toY: (counts["critical"] ?? 0).toDouble())
+                  ]),
+                ],
+              ),
+            ),
+          ),
+        ],
+      ),
+    ),
+  );
+}
+
+// Live Risk Timeline
+Widget riskTimeline(List scores) {
+  return Card(
+    child: Padding(
+      padding: const EdgeInsets.all(12),
+      child: Column(
+        children: [
+          const Text("Live Risk Timeline",
+              style: TextStyle(fontWeight: FontWeight.bold)),
+          const SizedBox(height: 10),
+          SizedBox(
+            height: 200,
+            child: LineChart(
+              LineChartData(
+                lineBarsData: [
+                  LineChartBarData(
+                    spots: scores
+                        .asMap()
+                        .entries
+                        .map((e) =>
+                            FlSpot(e.key.toDouble(), e.value.toDouble()))
+                        .toList(),
+                    isCurved: true,
+                    barWidth: 3,
+                  )
+                ],
+              ),
+            ),
+          ),
+        ],
+      ),
+    ),
+  );
+}
+Widget securityStatusBanner(int score) {
+
+  String status = "SECURE";
+  Color color = Colors.green;
+
+  if (score >= 80) {
+    status = "CRITICAL RISK";
+    color = Colors.red;
+  } else if (score >= 60) {
+    status = "HIGH RISK";
+    color = Colors.orange;
+  } else if (score >= 40) {
+    status = "MODERATE RISK";
+    color = Colors.yellow;
+  }
+
+  return Card(
+    color: color.withOpacity(0.2),
+    child: Padding(
+      padding: const EdgeInsets.all(14),
+      child: Row(
+        children: [
+          Icon(Icons.security, color: color, size: 32),
+          const SizedBox(width: 12),
+          Text(
+            "SECURITY STATUS: $status",
+            style: TextStyle(
+              fontSize: 18,
+              fontWeight: FontWeight.bold,
+              color: color,
+            ),
+          ),
+        ],
+      ),
+    ),
+  );
+}
+Widget scanningIndicator(bool scanning) {
+
+  if (!scanning) return const SizedBox();
+
+  return Card(
+    color: Colors.black,
+    child: Padding(
+      padding: const EdgeInsets.all(12),
+      child: Row(
+        children: const [
+          Icon(Icons.warning_amber_rounded, color: Colors.red),
+          SizedBox(width: 10),
+          Text(
+            "SCAN IN PROGRESS — ANALYZING TARGET...",
+            style: TextStyle(
+              color: Colors.red,
+              fontWeight: FontWeight.bold,
+            ),
+          )
+        ],
+      ),
+    ),
+  );
 }
